@@ -24,7 +24,7 @@ export default function LoginSuccess() {
 
   const logout = () => {
     localStorage.removeItem('user');
-    window.location.href = 'http://localhost:5000/auth/logout';
+    window.location.href = 'https://kavix-be.vercel.app/auth/logout';
   };
 
   if (!user) return <div>Signing you in…</div>;
