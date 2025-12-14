@@ -6,19 +6,26 @@ import dotenv from "dotenv";
 
 // Load env vars before initializing passport config
 dotenv.config();
-
-// Production env checks
+// Production env checks (do NOT crash the process in serverless environment).
+let configError = null;
 if (process.env.NODE_ENV === 'production') {
-  const required = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_CALLBACK_URL', 'JWT_SECRET', 'FRONTEND_URL'];
+  const required = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_CALLBACK_URL', 'JWT_SECRET', 'FRONTEND_URL', 'BACKEND_URL'];
   const missing = required.filter(k => !process.env[k]);
   if (missing.length) {
-    console.error('Missing required env vars in production:', missing.join(', '));
-    process.exit(1);
+    configError = `Missing required env vars in production: ${missing.join(', ')}`;
+    console.error(configError);
   }
 }
 
-await import('./config/passport.js');
-const { default: authRoutes } = await import('./routes/auth.js');
+let startupError = null;
+try {
+  await import('./config/passport.js');
+  const mod = await import('./routes/auth.js');
+  var authRoutes = mod.default;
+} catch (err) {
+  startupError = err;
+  console.error('Startup import error:', err && err.stack ? err.stack : err);
+}
 
 const app = express();
 
@@ -35,6 +42,17 @@ app.use(cookieParser());
 
 // For serverless production, prefer stateless JWT cookies; avoid express-session
 app.use(passport.initialize());
+
+// If there was a startup/config error, return a clear 500 on all auth requests
+app.use((req, res, next) => {
+  if (configError) {
+    return res.status(500).json({ error: 'Server misconfiguration', details: configError });
+  }
+  if (startupError) {
+    return res.status(500).json({ error: 'Server startup error', details: String(startupError.message || startupError) });
+  }
+  return next();
+});
 
 app.use("/auth", authRoutes);
 
