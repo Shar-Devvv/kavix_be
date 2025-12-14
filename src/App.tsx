@@ -2,9 +2,26 @@ import { useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
+import LoginSuccess from './LoginSuccess'
 
 function App() {
   const [count, setCount] = useState(0)
+
+  const googleLogin = () => {
+    const redirect = `${window.location.origin}/login-success`;
+    window.location.href = `http://localhost:5000/auth/google?redirect=${encodeURIComponent(redirect)}`;
+  };
+
+  const logout = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    const redirect = window.location.origin;
+    window.location.href = `http://localhost:5000/auth/logout?redirect=${encodeURIComponent(redirect)}`;
+  };
+
+  if (window.location.pathname === '/login-success') {
+    return <LoginSuccess />;
+  }
 
   return (
     <>
@@ -17,6 +34,10 @@ function App() {
         </a>
       </div>
       <h1>Vite + React</h1>
+      <div style={{ marginBottom: 16 }}>
+        <button onClick={googleLogin}>Login with Google</button>
+        <button onClick={logout} style={{ marginLeft: 12 }}>Logout</button>
+      </div>
       <div className="card">
         <button onClick={() => setCount((count) => count + 1)}>
           count is {count}
